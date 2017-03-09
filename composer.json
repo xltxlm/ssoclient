@@ -1,0 +1,28 @@
+{
+  "name": "xltxlm/ssoclient",
+  "description": "项目介绍",
+  "authors": [
+    {
+      "name": "xltxlm",
+      "email": "xltxlm@qq.com"
+    }
+  ],
+  "require": {
+    "php": ">=7.0",
+    "xltxlm/helper": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "xltxlm\\ssoclient\\": [
+        "src/"
+      ]
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "xltxlm\\ssoclient\\": [
+        "./"
+      ]
+    }
+  }
+}
