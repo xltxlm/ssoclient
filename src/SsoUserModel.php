@@ -9,10 +9,13 @@
 namespace xltxlm\ssoclient;
 
 use xltxlm\helper\Hclass\LoadFromArray;
+use xltxlm\helper\Hclass\ObjectToArray;
+use xltxlm\helper\Hclass\ObjectToJson;
 
 class SsoUserModel
 {
     use LoadFromArray;
+    use ObjectToJson;
     /** @var string 账户id */
     protected $id = 0;
     /** @var string 账户 */

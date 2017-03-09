@@ -14,12 +14,22 @@ trait LoginTrait
     use Request;
     protected $ssoauthString = "";
     /** @var string 公钥的文件路径 */
-    public static $pubkeyPath = "";
+    public static $privatekeyPath = "";
     /** @var string sso网址 */
     public static $ssoUrl = "";
 
     /** @var  SsoUserModel */
     protected $SsoUserModel;
+
+    public static function base64url_encode($data)
+    {
+        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+    }
+
+    public static function base64url_decode($data)
+    {
+        return base64_decode(str_pad(strtr($data, '-_', '+/'), strlen($data) % 4, '=', STR_PAD_RIGHT));
+    }
 
     /**
      * sso登陆成功之后回调
@@ -29,11 +39,11 @@ trait LoginTrait
     {
         $userCookieModel = new UserCookieModel();
         if ($this->getSsoauthString()) {
-            $decryptedviapublickey = "";
-            $pubkey = file_get_contents(self::$pubkeyPath);
+            $decryptedviaprivatekey = "";
+            $privatekey = file_get_contents(self::$privatekeyPath);
             //解密
-            openssl_public_decrypt($this->getSsoauthString(), $decryptedviapublickey, $pubkey);
-            $decryptedviapublickeyArray = json_decode($decryptedviapublickey, true);
+            openssl_private_decrypt($this->getSsoauthString(), $decryptedviaprivatekey, $privatekey);
+            $decryptedviapublickeyArray = json_decode($decryptedviaprivatekey, true);
             $this->SsoUserModel = (new SsoUserModel($decryptedviapublickeyArray));
             //如果是第一次取到字符串,那么设置cookie
             $userCookieModel->setUsername($this->SsoUserModel->getUsername());
@@ -67,19 +77,19 @@ trait LoginTrait
     /**
      * @return string
      */
-    public static function getPubkeyPath()
+    public static function getPrivatekeyPath()
     {
-        return self::$pubkeyPath;
+        return self::$privatekeyPath;
     }
 
     /**
      * 注意下会不会被 request 设置上去
-     * @param string $pubkeyPath
+     * @param string $privatekeyPath
      * @return string
      */
-    public static function setPubkeyPath($pubkeyPath)
+    public static function setPrivatekeyPath($privatekeyPath)
     {
-        return self::$pubkeyPath = $pubkeyPath;
+        return self::$privatekeyPath = $privatekeyPath;
     }
 
 
@@ -88,7 +98,7 @@ trait LoginTrait
      */
     public function getSsoauthString()
     {
-        return base64_decode($this->ssoauthString);
+        return self::base64url_decode($this->ssoauthString);
     }
 
     /**
