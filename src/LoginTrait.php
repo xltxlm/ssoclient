@@ -4,6 +4,7 @@ namespace xltxlm\ssoclient;
 
 use xltxlm\h5skin\Request\UserCookieModel;
 use xltxlm\helper\Ctroller\Request\Request;
+use xltxlm\helper\Url\FixUrl;
 
 /**
  * 登陆检测判断,放在每个需要验证的类入口上面
@@ -11,6 +12,8 @@ use xltxlm\helper\Ctroller\Request\Request;
  */
 trait LoginTrait
 {
+    /** @var  UserCookieModel */
+    protected $userCookieModel;
     use Request;
     protected $ssoauthString = "";
     /** @var string 公钥的文件路径 */
@@ -37,7 +40,7 @@ trait LoginTrait
      */
     public function getSsoUserModel()
     {
-        $userCookieModel = new UserCookieModel();
+        $this->userCookieModel = new UserCookieModel();
         if ($this->getSsoauthString()) {
             $decryptedviaprivatekey = "";
             $privatekey = file_get_contents(self::$privatekeyPath);
@@ -46,11 +49,11 @@ trait LoginTrait
             $decryptedviapublickeyArray = json_decode($decryptedviaprivatekey, true);
             $this->SsoUserModel = (new SsoUserModel($decryptedviapublickeyArray));
             //如果是第一次取到字符串,那么设置cookie
-            $userCookieModel->setUsername($this->SsoUserModel->getUsername());
-            $userCookieModel->makeCookie();
+            $this->userCookieModel->setUsername($this->SsoUserModel->getUsername());
+            $this->userCookieModel->makeCookie();
         } else {
             $this->SsoUserModel = (new SsoUserModel())
-                ->setUsername($userCookieModel->getUsername());
+                ->setUsername($this->userCookieModel->getUsername());
         }
 
         return $this->SsoUserModel;
@@ -117,11 +120,16 @@ trait LoginTrait
      */
     public function getLoginTrait()
     {
-        $islogin = (new UserCookieModel())
+        $islogin = $this->userCookieModel
             ->check();
         if (!$islogin) {
-            header("Location:".self::$ssoUrl);
-            die;
+            if (empty(self::$ssoUrl)) {
+                die("未设置SSO中心网址");
+            }
+            (new FixUrl(self::$ssoUrl))
+                ->setAttachKesy(['backurl' => $this::Myurl()])
+                ->setJump(true)
+                ->__invoke();
         }
     }
 }
