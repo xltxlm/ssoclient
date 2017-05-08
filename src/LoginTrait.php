@@ -38,10 +38,10 @@ trait LoginTrait
      * sso登陆成功之后回调
      * @return SsoUserModel
      */
-    public function getSsoUserModel()
+    public function getLoginTraitSsoUserModel()
     {
         $this->userCookieModel = new UserCookieModel();
-        if ($this->getSsoauthString()) {
+        if ($this->getSsoauthString() && self::$privatekeyPath) {
             $decryptedviaprivatekey = "";
             $privatekey = file_get_contents(self::$privatekeyPath);
             //解密
@@ -122,10 +122,7 @@ trait LoginTrait
     {
         $islogin = $this->userCookieModel
             ->check();
-        if (!$islogin) {
-            if (empty(self::$ssoUrl)) {
-                die("未设置SSO中心网址");
-            }
+        if (!$islogin && self::$privatekeyPath && self::$ssoUrl) {
             (new FixUrl(self::$ssoUrl))
                 ->setAttachKesy(['backurl' => $this::Myurl()])
                 ->setJump(true)
