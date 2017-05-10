@@ -8,6 +8,7 @@ use xltxlm\ssoclient\Sso\access;
 use xltxlm\ssoclient\Sso\Client\SsoctrolleruserSelectOne;
 use xltxlm\ssoclient\Sso\Ssoctrolleruser;
 use xltxlm\ssoclient\Sso\SsoctrolleruserModel;
+use xltxlm\thrift\Config\ThriftConfig;
 
 /**
  * 登陆检测判断,放在每个需要验证的类入口上面
@@ -20,8 +21,6 @@ trait LoginTrait
     protected $ssoauthString = "";
     /** @var string 公钥的文件路径 */
     public static $privatekeyPath = "";
-    /** @var string sso网址 */
-    public static $ssoUrl = "";
     /** @var int */
     protected $ssoctroller_class_access = access::WU_QUAN_XIAN;
 
@@ -107,23 +106,6 @@ trait LoginTrait
     /**
      * @return string
      */
-    public static function getSsoUrl()
-    {
-        return self::$ssoUrl;
-    }
-
-    /**
-     * @return string
-     */
-    public static function setSsoUrl($ssoUrl)
-    {
-        return self::$ssoUrl = $ssoUrl;
-    }
-
-
-    /**
-     * @return string
-     */
     public static function getPrivatekeyPath()
     {
         return self::$privatekeyPath;
@@ -149,7 +131,6 @@ trait LoginTrait
     }
 
 
-
     /** @var  Ssoctrolleruser */
     protected $Ssoctrolleruser;
 
@@ -169,17 +150,23 @@ trait LoginTrait
     {
         $islogin = $this->userCookieModel
             ->check();
+
+        //登录了,确认权限
+        $SsoThriftConfig = $this->getSsoThriftConfig();
+        /** @var ThriftConfig $SsoThriftConfigObject */
+        if ($SsoThriftConfig) {
+            $SsoThriftConfigObject = new $SsoThriftConfig;
+        }
         //没有登录，重定向要求登录
-        if (!$islogin && self::$privatekeyPath && self::$ssoUrl) {
-            (new FixUrl(self::$ssoUrl))
+        if (!$islogin && $SsoThriftConfig && self::$privatekeyPath) {
+            (new FixUrl('http://'.$SsoThriftConfigObject->getHosturl().':'.$SsoThriftConfigObject->getPort()))
                 ->setAttachKesy(['backurl' => $this::Myurl()])
                 ->setJump(true)
                 ->__invoke();
         }
 
-        //登录了,确认权限
-        $SsoThriftConfig = $this->getSsoThriftConfig();
-        if ($SsoThriftConfig && $islogin && self::$privatekeyPath && self::$ssoUrl) {
+
+        if ($islogin && $SsoThriftConfig && self::$privatekeyPath) {
             $SsoctrolleruserModel = (new SsoctrolleruserModel())
                 ->setUser($this->userCookieModel->getUsername())
                 ->setCtroller_class($this->ssoctroller_class ?: static::class);
