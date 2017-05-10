@@ -3,8 +3,11 @@
 namespace xltxlm\ssoclient;
 
 use xltxlm\h5skin\Request\UserCookieModel;
-use xltxlm\helper\Ctroller\Request\Request;
 use xltxlm\helper\Url\FixUrl;
+use xltxlm\ssoclient\Sso\access;
+use xltxlm\ssoclient\Sso\Client\SsoctrolleruserSelectOne;
+use xltxlm\ssoclient\Sso\Ssoctrolleruser;
+use xltxlm\ssoclient\Sso\SsoctrolleruserModel;
 
 /**
  * 登陆检测判断,放在每个需要验证的类入口上面
@@ -14,15 +17,56 @@ trait LoginTrait
 {
     /** @var  UserCookieModel */
     protected $userCookieModel;
-    use Request;
     protected $ssoauthString = "";
     /** @var string 公钥的文件路径 */
     public static $privatekeyPath = "";
     /** @var string sso网址 */
     public static $ssoUrl = "";
+    /** @var int */
+    protected $ssoctroller_class_access = access::WU_QUAN_XIAN;
 
     /** @var  SsoUserModel */
     protected $SsoUserModel;
+    /** @var string sso登录服务器地址的配置类 */
+    protected $SsoThriftConfig = "";
+
+    /**
+     * @return string
+     */
+    public function getSsoThriftConfig()
+    {
+        return $this->SsoThriftConfig;
+    }
+
+    /**
+     * @param string $SsoThriftConfig
+     * @return LoginTrait
+     */
+    public function setSsoThriftConfig(string $SsoThriftConfig): LoginTrait
+    {
+        $this->SsoThriftConfig = $SsoThriftConfig;
+        return $this;
+    }
+
+
+    /**
+     * @return int
+     */
+    public function getSsoctrollerClassAccess(): int
+    {
+        return $this->ssoctroller_class_access;
+    }
+
+    /**
+     * @param string $ssoctroller_class_access
+     * @return LoginTrait
+     */
+    public function setSsoctrollerClassAccess(int $ssoctroller_class_access)
+    {
+        $this->ssoctroller_class_access = $ssoctroller_class_access;
+        return $this;
+    }
+
 
     public static function base64url_encode($data)
     {
@@ -101,17 +145,20 @@ trait LoginTrait
      */
     public function getSsoauthString()
     {
-        return self::base64url_decode($this->ssoauthString);
+        return self::base64url_decode($_REQUEST['ssoauthString']);
     }
 
+
+
+    /** @var  Ssoctrolleruser */
+    protected $Ssoctrolleruser;
+
     /**
-     * @param string $ssoauthString
-     * @return LoginTrait
+     * @return Ssoctrolleruser
      */
-    public function setSsoauthString($ssoauthString)
+    public function getSsoctrolleruser()
     {
-        $this->ssoauthString = $ssoauthString;
-        return $this;
+        return $this->Ssoctrolleruser;
     }
 
 
@@ -122,11 +169,34 @@ trait LoginTrait
     {
         $islogin = $this->userCookieModel
             ->check();
+        //没有登录，重定向要求登录
         if (!$islogin && self::$privatekeyPath && self::$ssoUrl) {
             (new FixUrl(self::$ssoUrl))
                 ->setAttachKesy(['backurl' => $this::Myurl()])
                 ->setJump(true)
                 ->__invoke();
+        }
+
+        //登录了,确认权限
+        $SsoThriftConfig = $this->getSsoThriftConfig();
+        if ($SsoThriftConfig && $islogin && self::$privatekeyPath && self::$ssoUrl) {
+            $SsoctrolleruserModel = (new SsoctrolleruserModel())
+                ->setUser($this->userCookieModel->getUsername())
+                ->setCtroller_class($this->ssoctroller_class ?: static::class);
+            $this->Ssoctrolleruser = (new SsoctrolleruserSelectOne())
+                ->setSsoctrolleruserModel($SsoctrolleruserModel)
+                ->setThriftConfig(new $SsoThriftConfig)
+                ->__invoke();
+            if ($this->Ssoctrolleruser->access == '无权限') {
+                $this->setSsoctrollerClassAccess(access::WU_QUAN_XIAN);
+            }
+            if ($this->Ssoctrolleruser->access == '操作') {
+                $this->setSsoctrollerClassAccess(access::CAO_ZUO);
+            }
+            if ($this->Ssoctrolleruser->access == '只读') {
+                $this->setSsoctrollerClassAccess(access::ZHI_DU);
+            }
+
         }
     }
 }
