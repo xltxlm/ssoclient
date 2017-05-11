@@ -30,6 +30,16 @@ trait LoginTrait
     protected $SsoThriftConfig = "";
 
     /**
+     * @return UserCookieModel
+     */
+    public function getUserCookieModel()
+    {
+        return $this->userCookieModel;
+    }
+
+
+
+    /**
      * @return string
      */
     public function getSsoThriftConfig()
@@ -81,7 +91,7 @@ trait LoginTrait
      * sso登陆成功之后回调
      * @return SsoUserModel
      */
-    public function getLoginTraitSsoUserModel()
+    final public function getLoginTraitSsoUserModel()
     {
         $this->userCookieModel = new UserCookieModel();
         if ($this->getSsoauthString() && self::$privatekeyPath) {
@@ -146,7 +156,7 @@ trait LoginTrait
     /**
      * 检测是否登陆
      */
-    public function getLoginTrait()
+    final public function getLoginTrait()
     {
         $islogin = $this->userCookieModel
             ->check();
