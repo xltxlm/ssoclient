@@ -9,7 +9,6 @@
 namespace xltxlm\ssoclient;
 
 use xltxlm\helper\Hclass\LoadFromArray;
-use xltxlm\helper\Hclass\ObjectToArray;
 use xltxlm\helper\Hclass\ObjectToJson;
 
 class SsoUserModel
