@@ -168,8 +168,8 @@ trait LoginTrait
             $SsoThriftConfigObject = new $SsoThriftConfig;
         }
         //没有登录，重定向要求登录
-        if (!$islogin && $SsoThriftConfig && self::$privatekeyPath) {
-            (new FixUrl('http://'.$SsoThriftConfigObject->getHosturl().':'.$SsoThriftConfigObject->getPort()))
+        if (!$islogin) {
+            return (new FixUrl('http://'.$SsoThriftConfigObject->getHosturl().':'.$SsoThriftConfigObject->getPort()))
                 ->setAttachKesy(['backurl' => $this::Myurl()])
                 ->setJump(true)
                 ->__invoke();

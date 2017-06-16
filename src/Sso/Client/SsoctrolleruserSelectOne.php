@@ -66,6 +66,8 @@ class SsoctrolleruserSelectOne
         $this->ThriftConfig=$ThriftConfig;
         if ($ThriftConfig->getType() == ThriftConfig::HTTP) {
             $socket = new THttpClient($ThriftConfig->getHost(), $ThriftConfig->getPort(), '?c=ThriftServer/ThriftServerSsoctrolleruserSelectOne');
+        }elseif ($ThriftConfig->getType() == ThriftConfig::HTTPS) {
+            $socket = new THttpClient($ThriftConfig->getHost(), $ThriftConfig->getPort(), '?c=ThriftServer/ThriftServerSsoctrolleruserSelectOne','https');
         } else {
             $socket = new TSocket($ThriftConfig->getHost(), $ThriftConfig->getPort());
         }

@@ -1,0 +1,46 @@
+@startuml
+center header
+<font size=20>权限逻辑图</font>
+endheader
+right footer  夏琳泰 2017-06-04
+
+start
+:初始化权限->无权限;
+
+if(cookie验证就绪)then(y)
+partition 验证权限 {
+    if(磁盘key准备就绪)then(y)
+        if(sso服务器配置就绪)then(y)
+            #yellow:接口<
+            if (接口返回就绪) then (Y)
+                :分配对应权限;
+            else(n)
+                #red:系统异常并退出;
+                detach
+            endif
+        else(n)
+            :赋予操作权限;
+        endif
+    else(n)
+        :赋予操作权限;
+    endif
+}
+    -[#green]->
+    :执行对应的权限;
+partition 权限 {
+    fork
+        :操作权限;
+    fork again
+        :只读权限;
+    fork again
+        :没有权限;
+        #red:提示错误并退出;
+        detach
+    end fork
+}
+else(n)
+    #green:登陆中心;
+    detach
+endif
+:正常结束;
+@enduml
