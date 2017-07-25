@@ -39,7 +39,6 @@ trait LoginTrait
     }
 
 
-
     /**
      * @return string
      */
@@ -158,8 +157,8 @@ trait LoginTrait
             $SsoThriftConfigObject = new $SsoThriftConfig;
         }
         //没有登录，重定向要求登录
-        if (!$islogin) {
-            return (new FixUrl('http://'.$SsoThriftConfigObject->getHosturl().':'.$SsoThriftConfigObject->getPort()))
+        if (!$islogin && is_a($SsoThriftConfigObject, ThriftConfig::class)) {
+            return (new FixUrl('http://' . $SsoThriftConfigObject->getHosturl() . ':' . $SsoThriftConfigObject->getPort()))
                 ->setAttachKesy(['backurl' => $this::Myurl()])
                 ->setJump(true)
                 ->__invoke();
