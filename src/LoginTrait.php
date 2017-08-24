@@ -31,6 +31,25 @@ trait LoginTrait
     protected $SsoThriftConfig = "";
 
     /**
+     * @return string
+     */
+    public function getSsoctrollerClass(): string
+    {
+        return $this->ssoctroller_class ?: static::class;
+    }
+
+    /**
+     * @param string $ssoctroller_class
+     * @return $this
+     */
+    public function setSsoctrollerClass(string $ssoctroller_class)
+    {
+        $this->ssoctroller_class = $ssoctroller_class;
+        return $this;
+    }
+
+
+    /**
      * @return UserCookieModel
      */
     public function getUserCookieModel()
@@ -168,7 +187,7 @@ trait LoginTrait
         if ($islogin && $SsoThriftConfig && self::$privatekeyPath) {
             $SsoctrolleruserModel = (new SsoctrolleruserModel())
                 ->setUser($this->userCookieModel->getUsername())
-                ->setCtroller_class($this->ssoctroller_class ?: static::class);
+                ->setCtroller_class($this->getSsoctrollerClass());
             $this->Ssoctrolleruser = (new SsoctrolleruserSelectOne())
                 ->setSsoctrolleruserModel($SsoctrolleruserModel)
                 ->setThriftConfig(new $SsoThriftConfig)
