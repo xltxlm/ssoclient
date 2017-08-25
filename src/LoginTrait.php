@@ -2,8 +2,11 @@
 
 namespace xltxlm\ssoclient;
 
+use xltxlm\crontab\Config\RedisCacheConfig;
 use xltxlm\h5skin\Request\UserCookieModel;
 use xltxlm\helper\Url\FixUrl;
+use xltxlm\redis\LockKey;
+use xltxlm\redis\RedisCache;
 use xltxlm\ssoclient\Sso\access;
 use xltxlm\ssoclient\Sso\Client\SsoctrolleruserSelectOne;
 use xltxlm\ssoclient\Sso\Ssoctrolleruser;
@@ -169,6 +172,7 @@ trait LoginTrait
         $islogin = $this->userCookieModel
             ->check();
 
+
         //登录了,确认权限
         $SsoThriftConfig = $this->getSsoThriftConfig();
         /** @var ThriftConfig $SsoThriftConfigObject */
@@ -176,32 +180,47 @@ trait LoginTrait
             $SsoThriftConfigObject = new $SsoThriftConfig;
         }
         //没有登录，重定向要求登录
-        if (!$islogin && is_a($SsoThriftConfigObject, ThriftConfig::class)) {
-            (new FixUrl('http://' . $SsoThriftConfigObject->getHosturl() . ':' . $SsoThriftConfigObject->getPort()))
-                ->setAttachKesy(['backurl' => $this::Myurl()])
-                ->setJump(true)
-                ->__invoke();
+        if (php_sapi_name() == 'cli') {
+            return $this->setSsoctrollerClassAccess(access::CAO_ZUO);
+        } else {
+            if (!$islogin && is_a($SsoThriftConfigObject, ThriftConfig::class)) {
+                (new FixUrl('http://' . $SsoThriftConfigObject->getHosturl() . ':' . $SsoThriftConfigObject->getPort()))
+                    ->setAttachKesy(['backurl' => $this::Myurl()])
+                    ->setJump(true)
+                    ->__invoke();
+            }
         }
 
-
-        if ($islogin && $SsoThriftConfig && self::$privatekeyPath) {
-            $SsoctrolleruserModel = (new SsoctrolleruserModel())
-                ->setUser($this->userCookieModel->getUsername())
-                ->setCtroller_class($this->getSsoctrollerClass());
-            $this->Ssoctrolleruser = (new SsoctrolleruserSelectOne())
-                ->setSsoctrolleruserModel($SsoctrolleruserModel)
-                ->setThriftConfig(new $SsoThriftConfig)
+        $key = 'priv' . $this->getSsoctrollerClass();
+        $redisCache = (new RedisCache())
+            ->setRedisConfig(new RedisCacheConfig())
+            ->setKey($key)
+            ->setExpire(60);
+        $access = $redisCache->__invoke();
+        if ($access) {
+            $this->setSsoctrollerClassAccess($access);
+        } else {
+            if ($islogin && $SsoThriftConfig && self::$privatekeyPath) {
+                $SsoctrolleruserModel = (new SsoctrolleruserModel())
+                    ->setUser($this->userCookieModel->getUsername())
+                    ->setCtroller_class($this->getSsoctrollerClass());
+                $this->Ssoctrolleruser = (new SsoctrolleruserSelectOne())
+                    ->setSsoctrolleruserModel($SsoctrolleruserModel)
+                    ->setThriftConfig(new $SsoThriftConfig)
+                    ->__invoke();
+                if ($this->Ssoctrolleruser->access == '无权限') {
+                    $this->setSsoctrollerClassAccess(access::WU_QUAN_XIAN);
+                }
+                if ($this->Ssoctrolleruser->access == '操作') {
+                    $this->setSsoctrollerClassAccess(access::CAO_ZUO);
+                }
+                if ($this->Ssoctrolleruser->access == '只读') {
+                    $this->setSsoctrollerClassAccess(access::ZHI_DU);
+                }
+            }
+            $redisCache
+                ->setValue($this->getSsoctrollerClassAccess())
                 ->__invoke();
-            if ($this->Ssoctrolleruser->access == '无权限') {
-                $this->setSsoctrollerClassAccess(access::WU_QUAN_XIAN);
-            }
-            if ($this->Ssoctrolleruser->access == '操作') {
-                $this->setSsoctrollerClassAccess(access::CAO_ZUO);
-            }
-            if ($this->Ssoctrolleruser->access == '只读') {
-                $this->setSsoctrollerClassAccess(access::ZHI_DU);
-            }
-
         }
     }
 }
