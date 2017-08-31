@@ -2,7 +2,6 @@
 
 namespace xltxlm\ssoclient;
 
-use xltxlm\crontab\Config\RedisCacheConfig;
 use xltxlm\h5skin\Request\UserCookieModel;
 use xltxlm\helper\Url\FixUrl;
 use xltxlm\redis\LockKey;
@@ -191,36 +190,23 @@ trait LoginTrait
             }
         }
 
-        $key = 'priv' . $this->getSsoctrollerClass();
-        $redisCache = (new RedisCache())
-            ->setRedisConfig(new RedisCacheConfig())
-            ->setKey($key)
-            ->setExpire(60);
-        $access = $redisCache->__invoke();
-        if ($access) {
-            $this->setSsoctrollerClassAccess($access);
-        } else {
-            if ($islogin && $SsoThriftConfig && self::$privatekeyPath) {
-                $SsoctrolleruserModel = (new SsoctrolleruserModel())
-                    ->setUser($this->userCookieModel->getUsername())
-                    ->setCtroller_class($this->getSsoctrollerClass());
-                $this->Ssoctrolleruser = (new SsoctrolleruserSelectOne())
-                    ->setSsoctrolleruserModel($SsoctrolleruserModel)
-                    ->setThriftConfig(new $SsoThriftConfig)
-                    ->__invoke();
-                if ($this->Ssoctrolleruser->access == '无权限') {
-                    $this->setSsoctrollerClassAccess(access::WU_QUAN_XIAN);
-                }
-                if ($this->Ssoctrolleruser->access == '操作') {
-                    $this->setSsoctrollerClassAccess(access::CAO_ZUO);
-                }
-                if ($this->Ssoctrolleruser->access == '只读') {
-                    $this->setSsoctrollerClassAccess(access::ZHI_DU);
-                }
-            }
-            $redisCache
-                ->setValue($this->getSsoctrollerClassAccess())
+        if ($islogin && $SsoThriftConfig && self::$privatekeyPath) {
+            $SsoctrolleruserModel = (new SsoctrolleruserModel())
+                ->setUser($this->userCookieModel->getUsername())
+                ->setCtroller_class($this->getSsoctrollerClass());
+            $this->Ssoctrolleruser = (new SsoctrolleruserSelectOne())
+                ->setSsoctrolleruserModel($SsoctrolleruserModel)
+                ->setThriftConfig(new $SsoThriftConfig)
                 ->__invoke();
+            if ($this->Ssoctrolleruser->access == '无权限') {
+                $this->setSsoctrollerClassAccess(access::WU_QUAN_XIAN);
+            }
+            if ($this->Ssoctrolleruser->access == '操作') {
+                $this->setSsoctrollerClassAccess(access::CAO_ZUO);
+            }
+            if ($this->Ssoctrolleruser->access == '只读') {
+                $this->setSsoctrollerClassAccess(access::ZHI_DU);
+            }
         }
     }
 }
