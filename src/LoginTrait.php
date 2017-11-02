@@ -193,7 +193,7 @@ trait LoginTrait
         if ($islogin && $SsoThriftConfig && self::$privatekeyPath) {
             $SsoctrolleruserModel = (new SsoctrolleruserModel())
                 ->setUser($this->userCookieModel->getUsername())
-                ->setCtroller_class($this->getSsoctrollerClass());
+                ->setCtroller_class($this->getSsoctrollerClass() . ':' . $_SERVER['HTTP_X_FORWARDED_PORT']);
             $this->Ssoctrolleruser = (new SsoctrolleruserSelectOne())
                 ->setSsoctrolleruserModel($SsoctrolleruserModel)
                 ->setThriftConfig(new $SsoThriftConfig)
