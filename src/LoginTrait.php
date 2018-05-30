@@ -2,14 +2,14 @@
 
 namespace xltxlm\ssoclient;
 
+use kuaigeng\kkreview\Grpc\SsoctrolleruserRequest;
+use kuaigeng\kkreview\Grpc\SsoctrolleruserResponse;
 use xltxlm\h5skin\Request\UserCookieModel;
+use xltxlm\helper\BasicType;
+use xltxlm\helper\Ctroller\LoadClass;
 use xltxlm\helper\Url\FixUrl;
-use xltxlm\redis\LockKey;
 use xltxlm\redis\RedisCache;
 use xltxlm\ssoclient\Sso\access;
-use xltxlm\ssoclient\Sso\Client\SsoctrolleruserSelectOne;
-use xltxlm\ssoclient\Sso\Ssoctrolleruser;
-use xltxlm\ssoclient\Sso\SsoctrolleruserModel;
 use xltxlm\thrift\Config\ThriftConfig;
 
 /**
@@ -104,7 +104,10 @@ trait LoginTrait
     final public function getLoginTraitSsoUserModel()
     {
         $this->userCookieModel = new UserCookieModel();
-        if ($this->getSsoauthString() && self::$privatekeyPath) {
+        //如果存在登陆密钥，账户直接从密钥里面取出即可
+        //&& $_SERVER['HTTP_REFERER']
+        $is需要切换账户 = (!$this->userCookieModel->getUsername() || !$this->userCookieModel->check()) && $this->getSsoauthString() && self::$privatekeyPath;
+        if ($is需要切换账户) {
             $decryptedviaprivatekey = "";
             $privatekey = file_get_contents(self::$privatekeyPath);
             //解密
@@ -112,8 +115,9 @@ trait LoginTrait
             $decryptedviapublickeyArray = json_decode($decryptedviaprivatekey, true);
             $this->SsoUserModel = (new SsoUserModel($decryptedviapublickeyArray));
             //如果是第一次取到字符串,那么设置cookie
-            $this->userCookieModel->setUsername($this->SsoUserModel->getUsername());
-            $this->userCookieModel->makeCookie();
+            $this->userCookieModel
+                ->setUsername($this->SsoUserModel->getUsername())
+                ->makeCookie();
         } else {
             $this->SsoUserModel = (new SsoUserModel())
                 ->setUsername($this->userCookieModel->getUsername());
@@ -151,11 +155,11 @@ trait LoginTrait
     }
 
 
-    /** @var  Ssoctrolleruser */
+    /** @var  SsoctrolleruserResponse */
     protected $Ssoctrolleruser;
 
     /**
-     * @return Ssoctrolleruser
+     * @return SsoctrolleruserResponse
      */
     public function getSsoctrolleruser()
     {
@@ -171,7 +175,6 @@ trait LoginTrait
         $islogin = $this->userCookieModel
             ->check();
 
-
         //登录了,确认权限
         $SsoThriftConfig = $this->getSsoThriftConfig();
         /** @var ThriftConfig $SsoThriftConfigObject */
@@ -180,8 +183,10 @@ trait LoginTrait
         }
         //没有登录，重定向要求登录
         if (php_sapi_name() == 'cli') {
-            return $this->setSsoctrollerClassAccess(access::CAO_ZUO);
+            $this->setSsoctrollerClassAccess(access::CAO_ZUO);
+            return null;
         } else {
+            //如果配置的登录中心，并且没有登录的。跳转过去
             if (!$islogin && is_a($SsoThriftConfigObject, ThriftConfig::class)) {
                 (new FixUrl('http://' . $SsoThriftConfigObject->getHosturl() . ':' . $SsoThriftConfigObject->getPort()))
                     ->setAttachKesy(['backurl' => $this::Myurl()])
@@ -191,20 +196,50 @@ trait LoginTrait
         }
 
         if ($islogin && $SsoThriftConfig && self::$privatekeyPath) {
-            $SsoctrolleruserModel = (new SsoctrolleruserModel())
-                ->setUser($this->userCookieModel->getUsername())
-                ->setCtroller_class($this->getSsoctrollerClass() . ':' . $_SERVER['HTTP_X_FORWARDED_PORT']);
-            $this->Ssoctrolleruser = (new SsoctrolleruserSelectOne())
-                ->setSsoctrolleruserModel($SsoctrolleruserModel)
-                ->setThriftConfig(new $SsoThriftConfig)
-                ->__invoke();
-            if ($this->Ssoctrolleruser->access == '无权限') {
+
+            $rootNamespce = (new BasicType(LoadClass::$rootNamespce))->popby('\\')->getValue();
+            $SsoctrolleruserRequestClass = $rootNamespce . '\\Grpc\\SsoctrolleruserRequest';
+            $SsoctrolleruserResponseClass = $rootNamespce . '\\Grpc\\SsoctrolleruserResponse';
+
+            //一个账户的权限默认缓存一个小时
+            $key = "priv_" . $this->userCookieModel->getUsername() . $this->getSsoctrollerClass() . $_SERVER['HTTP_X_FORWARDED_PORT'];
+
+            $redisClass = $rootNamespce . '\\Config\\RedisCacheConfig';
+            $RedisCacheObject = (new RedisCache())
+                ->setRedisConfig(new $redisClass)
+                ->setKey($key)
+                ->setExpire(3600 / 2);
+            $Ssoctrolleruser = $RedisCacheObject->__invoke();
+            if ($RedisCacheObject->isCached()) {
+                $this->Ssoctrolleruser = $Ssoctrolleruser;
+            }
+
+            if (!($this->Ssoctrolleruser instanceof $SsoctrolleruserResponseClass)) {
+                $this->Ssoctrolleruser = (new $SsoctrolleruserResponseClass);
+            }
+            if (!$this->Ssoctrolleruser->getAccess() || $this->Ssoctrolleruser->getAccess() == '无权限') //查询当前账户的权限
+            {
+                /** @var SsoctrolleruserRequest $Ssoctrolleruser */
+                $Ssoctrolleruser = (new $SsoctrolleruserRequestClass);
+                $this->Ssoctrolleruser = $Ssoctrolleruser
+                    ->setCtroller_class($this->getSsoctrollerClass())
+                    ->setHttpsport($_SERVER['HTTP_X_FORWARDED_PORT'])
+                    ->setUser($this->userCookieModel->getUsername())
+                    ->__invoke();
+                if ($this->Ssoctrolleruser->getAccess() != '无权限') {
+                    $RedisCacheObject
+                        ->setValue($this->Ssoctrolleruser)
+                        ->__invoke();
+                }
+            }
+
+            if ($this->Ssoctrolleruser->getAccess() == '无权限') {
                 $this->setSsoctrollerClassAccess(access::WU_QUAN_XIAN);
             }
-            if ($this->Ssoctrolleruser->access == '操作') {
+            if ($this->Ssoctrolleruser->getAccess() == '操作') {
                 $this->setSsoctrollerClassAccess(access::CAO_ZUO);
             }
-            if ($this->Ssoctrolleruser->access == '只读') {
+            if ($this->Ssoctrolleruser->getAccess() == '只读') {
                 $this->setSsoctrollerClassAccess(access::ZHI_DU);
             }
         }
