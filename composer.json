@@ -7,9 +7,11 @@
       "email": "xltxlm@qq.com"
     }
   ],
+  "minimum-stability": "dev",
   "require": {
     "php": ">=7.0",
     "xltxlm/thrift": "*",
+    "xltxlm/redis": "@dev",
     "xltxlm/h5skin": "*"
   },
   "autoload": {
