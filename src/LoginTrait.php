@@ -203,7 +203,6 @@ trait LoginTrait
         }
 
         if ($islogin && $SsoThriftConfig && self::$privatekeyPath) {
-
             $rootNamespce = (new BasicType(LoadClass::$rootNamespce))->popby('\\')->getValue();
             $SsoctrolleruserRequestClass = $rootNamespce . '\\Grpc\\SsoctrolleruserRequest';
             $SsoctrolleruserResponseClass = $rootNamespce . '\\Grpc\\SsoctrolleruserResponse';
@@ -215,7 +214,7 @@ trait LoginTrait
             $RedisCacheObject = (new RedisCache())
                 ->setRedisConfig(new $redisClass)
                 ->setKey($key)
-                ->setExpire(3600 / 60);
+                ->setExpire(3600);
             $Ssoctrolleruser = $RedisCacheObject->__invoke();
             if ($RedisCacheObject->getcached()) {
                 $this->Ssoctrolleruser = $Ssoctrolleruser;
@@ -224,8 +223,9 @@ trait LoginTrait
             if (!($this->Ssoctrolleruser instanceof $SsoctrolleruserResponseClass)) {
                 $this->Ssoctrolleruser = (new $SsoctrolleruserResponseClass);
             }
-            if (!$this->Ssoctrolleruser->getAccess() || $this->Ssoctrolleruser->getAccess() == '无权限') //查询当前账户的权限
+            if (!$this->Ssoctrolleruser->getAccess() || $this->Ssoctrolleruser->getAccess() == '无权限')
             {
+                //查询当前账户的权限
                 /** @var SsoctrolleruserRequest $Ssoctrolleruser */
                 $Ssoctrolleruser = (new $SsoctrolleruserRequestClass);
                 $this->Ssoctrolleruser = $Ssoctrolleruser
